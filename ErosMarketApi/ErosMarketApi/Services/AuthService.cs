@@ -1,0 +1,132 @@
+using ErosMarketApi.Data;
+using ErosMarketApi.DTOs;
+using ErosMarketApi.Models;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
+
+namespace ErosMarketApi.Services
+{
+    public class AuthService : IAuthService
+    {
+        private readonly ApplicationDbContext _context;
+        private readonly IConfiguration _configuration;
+
+        public AuthService(ApplicationDbContext context, IConfiguration configuration)
+        {
+            _context = context;
+            _configuration = configuration;
+        }
+
+        public async Task<LoginResponseDTO?> LoginAsync(LoginDTO request)
+        {
+            var user = await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Email == request.Email);
+            if (user == null) return null;
+
+            if (!VerifyPasswordHash(request.Password, user.PasswordHash))
+            {
+                return null;
+            }
+
+            return new LoginResponseDTO
+            {
+                Token = CreateToken(user),
+                Username = user.Username,
+                Email = user.Email,
+                Role = user.Role?.Name ?? "Invitado",
+                Avatar = user.Avatar
+            };
+        }
+
+        public async Task<User?> RegisterAsync(RegisterDTO request)
+        {
+            if (await _context.Users.AnyAsync(u => u.Email == request.Email))
+            {
+                return null;
+            }
+
+            var guestRole = await _context.Roles.FirstOrDefaultAsync(r => r.Name == "Invitado");
+            
+            var user = new User
+            {
+                Username = request.Username,
+                Email = request.Email,
+                PasswordHash = HashPassword(request.Password),
+                Avatar = string.IsNullOrEmpty(request.Avatar) ? "👤" : request.Avatar,
+                Role = guestRole
+            };
+
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+            return user;
+        }
+
+        public async Task<bool> UpdateProfileAsync(int userId, string username, string email, string avatar)
+        {
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null) return false;
+
+            user.Username = username;
+            user.Email = email;
+            if (!string.IsNullOrEmpty(avatar))
+            {
+                user.Avatar = avatar;
+            }
+
+            _context.Entry(user).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        private string CreateToken(User user)
+        {
+            // Ensure Role is loaded
+            var roleName = user.Role?.Name ?? "Guest";
+
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Name, user.Username),
+                new Claim(ClaimTypes.Email, user.Email),
+                new Claim(ClaimTypes.Role, roleName)
+            };
+
+            var jwtKey = _configuration["Jwt:Key"];
+            if (string.IsNullOrEmpty(jwtKey))
+            {
+                throw new InvalidOperationException("JWT Key is missing from configuration.");
+            }
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256Signature);
+
+            var token = new JwtSecurityToken(
+                claims: claims,
+                expires: DateTime.Now.AddMinutes(60),
+                signingCredentials: creds,
+                issuer: _configuration.GetSection("Jwt:Issuer").Value,
+                audience: _configuration.GetSection("Jwt:Audience").Value
+            );
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+        private string HashPassword(string password)
+        {
+            // Simple hashing strategy using SHA256
+            // In production use BCrypt or Argon2
+            using var sha256 = SHA256.Create();
+            var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
+            return Convert.ToBase64String(hashedBytes);
+        }
+
+        private bool VerifyPasswordHash(string password, string storedHash)
+        {
+            var hash = HashPassword(password);
+            return hash == storedHash;
+        }
+    }
+}

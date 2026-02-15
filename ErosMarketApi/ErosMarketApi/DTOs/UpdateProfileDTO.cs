@@ -1,0 +1,16 @@
+using System.ComponentModel.DataAnnotations;
+
+namespace ErosMarketApi.DTOs
+{
+    public class UpdateProfileDTO
+    {
+        [Required]
+        public string Username { get; set; } = string.Empty;
+
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = string.Empty;
+
+        public string Avatar { get; set; } = string.Empty;
+    }
+}
