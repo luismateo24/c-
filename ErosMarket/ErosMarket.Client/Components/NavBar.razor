@@ -1,0 +1,46 @@
+@using ErosMarket.Client.Services
+@inject AuthStateService Auth
+@inject CartService Cart
+
+<nav class="navbar glass">
+    <div class="logo">EROS MARKET</div>
+    <div class="nav-links">
+        <a href="#" class="nav-link">Colección</a>
+        <a href="#" class="nav-link">Novedades</a>
+        @if (Auth.IsAuthenticated)
+        {
+            <div class="user-profile">
+                <div class="user-avatar" @onclick="OnShowProfile" style="cursor:pointer;overflow:hidden;">
+                    @if (!string.IsNullOrEmpty(Auth.CurrentUser?.Avatar) && Auth.CurrentUser.Avatar.StartsWith("http"))
+                    {
+                        <img src="@Auth.CurrentUser.Avatar" alt="Avatar" style="width:100%;height:100%;object-fit:cover;" />
+                    }
+                    else
+                    {
+                        <span>👤</span>
+                    }
+                </div>
+                <span class="nav-link" @onclick="OnShowProfile" style="cursor:pointer;">Hola, @Auth.CurrentUser?.Username!</span>
+                <span class="nav-link logout-btn" @onclick="HandleLogout">Cerrar Sesión</span>
+            </div>
+        }
+        else
+        {
+            <span class="nav-link" @onclick="OnShowLogin" style="cursor:pointer;">Entrar</span>
+            <span class="nav-link" @onclick="OnShowRegister" style="cursor:pointer;">Registrarse</span>
+        }
+    </div>
+    <button class="btn btn-primary" @onclick="OnShowCart">
+        Carrito (@Cart.TotalCount)
+    </button>
+</nav>
+
+@code {
+    [Parameter] public EventCallback OnShowLogin { get; set; }
+    [Parameter] public EventCallback OnShowRegister { get; set; }
+    [Parameter] public EventCallback OnShowCart { get; set; }
+    [Parameter] public EventCallback OnShowProfile { get; set; }
+    [Parameter] public EventCallback OnLogout { get; set; }
+
+    async Task HandleLogout() => await OnLogout.InvokeAsync();
+}

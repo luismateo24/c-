@@ -1,0 +1,107 @@
+@using ErosMarket.Client.Services
+@using ErosMarket.Shared.Models
+@inject HttpClient Http
+@inject AuthStateService Auth
+
+<div class="modal-overlay">
+    <div class="modal-content glass">
+        <h2>@(IsEditing ? "Editar Producto" : "Nuevo Producto")</h2>
+        <EditForm Model="model" OnValidSubmit="HandleSubmit">
+            <div class="form-group">
+                <label>Nombre</label>
+                <InputText @bind-Value="model.Name" class="form-control" />
+            </div>
+            <div class="form-group" style="display:grid;grid-template-columns:1fr 1fr;gap:15px">
+                <div>
+                    <label>Precio</label>
+                    <InputNumber @bind-Value="model.Price" class="form-control" />
+                </div>
+                <div>
+                    <label>Stock</label>
+                    <InputNumber @bind-Value="model.Stock" class="form-control" />
+                </div>
+            </div>
+            <div class="form-group">
+                <label>URL Imagen del Producto</label>
+                <InputText @bind-Value="model.ImageUrl" class="form-control" placeholder="https://..." />
+            </div>
+            <div class="form-group" style="display:grid;grid-template-columns:1fr 1fr;gap:15px">
+                <div>
+                    <label>Emoji (Opcional)</label>
+                    <InputText @bind-Value="model.Emoji" class="form-control" placeholder="Ej: ✨" />
+                </div>
+                <div>
+                    <label>Categoría</label>
+                    <InputSelect @bind-Value="model.Category" class="form-select">
+                        @foreach (var c in ProductCategories)
+                        {
+                            <option value="@c">@c</option>
+                        }
+                    </InputSelect>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Descripción</label>
+                <InputText @bind-Value="model.Description" class="form-control" />
+            </div>
+            @if (!string.IsNullOrEmpty(error))
+            {
+                <p class="error-text">@error</p>
+            }
+            <div class="modal-actions">
+                <button type="submit" class="btn btn-primary">@(IsEditing ? "Guardar" : "Crear")</button>
+                <button type="button" class="btn btn-outline" @onclick="OnClose">Cancelar</button>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [Parameter] public Product? Product { get; set; }
+    [Parameter] public string? Token { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnSaved { get; set; }
+
+    static readonly string[] ProductCategories = { "Bienestar", "Ropa", "Cuidado", "Hogar", "Accesorios", "Juguetes", "Comestibles", "General" };
+
+    Product model = new() { Category = "General", Stock = 10 };
+    string error = "";
+    bool IsEditing => Product != null;
+
+    protected override void OnParametersSet()
+    {
+        if (Product != null)
+            model = new Product
+            {
+                Id = Product.Id,
+                Name = Product.Name,
+                Price = Product.Price,
+                Emoji = Product.Emoji,
+                Description = Product.Description,
+                Category = Product.Category,
+                Stock = Product.Stock,
+                ImageUrl = Product.ImageUrl
+            };
+    }
+
+    async Task HandleSubmit()
+    {
+        error = "";
+        try
+        {
+            HttpResponseMessage res;
+            var req = IsEditing
+                ? new HttpRequestMessage(HttpMethod.Put, $"api/products/{model.Id}") { Content = JsonContent.Create(model) }
+                : new HttpRequestMessage(HttpMethod.Post, "api/products") { Content = JsonContent.Create(model) };
+            req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", Token);
+            res = await Http.SendAsync(req);
+            if (res.IsSuccessStatusCode)
+            {
+                await OnSaved.InvokeAsync();
+                await OnClose.InvokeAsync();
+            }
+            else { error = "Error al guardar el producto."; }
+        }
+        catch { error = "Error de conexión."; }
+    }
+}

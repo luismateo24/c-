@@ -1,0 +1,137 @@
+@page "/"
+@using ErosMarket.Client.Services
+@using ErosMarket.Client.Components
+@using ErosMarket.Shared.Models
+@inject HttpClient Http
+@inject AuthStateService Auth
+@inject CartService Cart
+
+<PageTitle>ErosMarket - Elegancia & Placer</PageTitle>
+
+<section class="hero">
+    <h1 class="hero-title fade-in">Elegancia &amp; Placer <br /> en un solo lugar.</h1>
+    <p class="hero-subtitle fade-in">Descubre nuestra exclusiva colección de artículos diseñados para elevar tus sentidos. Calidad premium y discreción garantizada.</p>
+    <div class="hero-actions fade-in">
+        <button class="btn btn-primary">Explorar Ahora</button>
+        <button class="btn btn-outline" style="margin-left:15px">Saber Más</button>
+    </div>
+</section>
+
+<main>
+    <section class="product-section">
+        <div class="section-header">
+            <h2 style="font-size:2.5rem">Nuestra Selección</h2>
+            @if (Auth.IsAdmin)
+            {
+                <button class="btn btn-primary" @onclick="OpenNewProduct">+ Añadir Producto</button>
+            }
+        </div>
+
+        <div class="category-filter">
+            @foreach (var cat in categories)
+            {
+                <button class="filter-btn @(selectedCategory == cat ? "active" : "")"
+                        @onclick="@(() => selectedCategory = cat)">@cat</button>
+            }
+        </div>
+
+        @if (loading)
+        {
+            <p style="text-align:center">Cargando experiencias...</p>
+        }
+        else
+        {
+            <div class="product-grid">
+                @foreach (var product in FilteredProducts)
+                {
+                    <div class="product-card">
+                        <div class="product-category-tag">@product.Category</div>
+                        <div class="product-image">
+                            @if (!string.IsNullOrEmpty(product.ImageUrl))
+                            {
+                                <img src="@product.ImageUrl" alt="@product.Name" style="width:100%;height:100%;object-fit:cover;" />
+                            }
+                            else
+                            {
+                                <span style="font-size:3rem">@(product.Emoji ?? "📦")</span>
+                            }
+                        </div>
+                        <div class="product-info">
+                            <h3 class="product-name">@product.Name</h3>
+                            <div class="product-meta">
+                                <span class="product-price">$@product.Price</span>
+                                <span class="product-stock @(product.Stock < 5 ? "low-stock" : "")">
+                                    Stock: @product.Stock
+                                </span>
+                            </div>
+                            <p class="product-description">@product.Description</p>
+                            @if (Auth.IsAdmin)
+                            {
+                                <div class="admin-actions">
+                                    <button class="btn btn-edit" @onclick="@(() => OpenEditProduct(product))">Editar</button>
+                                    <button class="btn btn-delete" @onclick="@(() => DeleteProduct(product.Id))">Eliminar</button>
+                                </div>
+                            }
+                            else
+                            {
+                                <button class="btn btn-primary" style="width:100%;margin-top:15px;justify-content:center"
+                                        @onclick="@(async () => await Cart.AddToCartAsync(product))">
+                                    Añadir al Carrito
+                                </button>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </section>
+</main>
+
+@if (showProductModal)
+{
+    <ProductFormModal Product="editingProduct"
+                      Token="@Auth.CurrentUser?.Token"
+                      OnClose="CloseProductModal"
+                      OnSaved="FetchProducts" />
+}
+
+@code {
+    List<Product> products = new();
+    bool loading = true;
+    string selectedCategory = "Todas";
+    Product? editingProduct;
+    bool showProductModal;
+
+    static readonly string[] categories = { "Todas", "Bienestar", "Ropa", "Cuidado", "Hogar", "Accesorios", "Juguetes", "Comestibles", "General" };
+
+    IEnumerable<Product> FilteredProducts => selectedCategory == "Todas"
+        ? products
+        : products.Where(p => p.Category == selectedCategory);
+
+    protected override async Task OnInitializedAsync() => await FetchProducts();
+
+    async Task FetchProducts()
+    {
+        loading = true;
+        try { products = await Http.GetFromJsonAsync<List<Product>>("api/products") ?? new(); }
+        catch { }
+        loading = false;
+    }
+
+    void OpenNewProduct() { editingProduct = null; showProductModal = true; }
+
+    void OpenEditProduct(Product p) { editingProduct = p; showProductModal = true; }
+
+    void CloseProductModal() { showProductModal = false; editingProduct = null; }
+
+    async Task DeleteProduct(int id)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", "¿Estás seguro de eliminar este producto?")) return;
+        var req = new HttpRequestMessage(HttpMethod.Delete, $"api/products/{id}");
+        req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", Auth.CurrentUser?.Token);
+        var res = await Http.SendAsync(req);
+        if (res.IsSuccessStatusCode) await FetchProducts();
+    }
+
+    [Inject] IJSRuntime JS { get; set; } = default!;
+}

@@ -1,0 +1,78 @@
+@using ErosMarket.Client.Services
+@using ErosMarket.Shared.DTOs
+@inject HttpClient Http
+@inject AuthStateService Auth
+
+<div class="modal-overlay">
+    <div class="modal-content glass">
+        <h2>Mi Perfil</h2>
+        <EditForm Model="model" OnValidSubmit="HandleUpdate">
+            <div class="form-group" style="text-align:center;margin-bottom:20px">
+                <div class="user-avatar" style="width:80px;height:80px;margin:0 auto 10px;overflow:hidden;">
+                    @if (!string.IsNullOrEmpty(model.Avatar) && model.Avatar.StartsWith("http"))
+                    {
+                        <img src="@model.Avatar" alt="Avatar" style="width:100%;height:100%;object-fit:cover;" />
+                    }
+                    else { <span>👤</span> }
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Nombre de Usuario</label>
+                <InputText @bind-Value="model.Username" class="form-control" />
+            </div>
+            <div class="form-group">
+                <label>Email</label>
+                <InputText type="email" @bind-Value="model.Email" class="form-control" />
+            </div>
+            <div class="form-group">
+                <label>URL Imagen Avatar</label>
+                <InputText @bind-Value="model.Avatar" class="form-control" />
+            </div>
+            @if (!string.IsNullOrEmpty(error))
+            {
+                <p class="error-text">@error</p>
+            }
+            <div class="modal-actions">
+                <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                <button type="button" class="btn btn-outline" @onclick="OnClose">Cerrar</button>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback OnClose { get; set; }
+    UpdateProfileDTO model = new();
+    string error = "";
+
+    protected override void OnInitialized()
+    {
+        model = new UpdateProfileDTO
+        {
+            Username = Auth.CurrentUser?.Username ?? "",
+            Email = Auth.CurrentUser?.Email ?? "",
+            Avatar = Auth.CurrentUser?.Avatar ?? ""
+        };
+    }
+
+    async Task HandleUpdate()
+    {
+        error = "";
+        try
+        {
+            var req = new HttpRequestMessage(HttpMethod.Put, "api/auth/profile")
+            {
+                Content = JsonContent.Create(model)
+            };
+            req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", Auth.CurrentUser?.Token);
+            var res = await Http.SendAsync(req);
+            if (res.IsSuccessStatusCode)
+            {
+                await Auth.UpdateUserAsync(model.Username, model.Email, model.Avatar);
+                await OnClose.InvokeAsync();
+            }
+            else { error = "Error al actualizar perfil."; }
+        }
+        catch { error = "Error de conexión."; }
+    }
+}

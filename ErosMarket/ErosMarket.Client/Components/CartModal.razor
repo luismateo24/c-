@@ -1,0 +1,61 @@
+@using ErosMarket.Client.Services
+@inject CartService Cart
+@inject IJSRuntime JS
+
+<div class="modal-overlay">
+    <div class="modal-content glass" style="max-width:500px;width:90%">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:30px">
+            <h2 style="margin:0">Tu Carrito</h2>
+            <button class="btn btn-outline" @onclick="OnClose">Cerrar</button>
+        </div>
+
+        @if (!Cart.Items.Any())
+        {
+            <p style="text-align:center;padding:40px 0">El carrito está vacío.</p>
+        }
+        else
+        {
+            <div class="cart-items" style="max-height:400px;overflow-y:auto;margin-bottom:20px">
+                @foreach (var item in Cart.Items)
+                {
+                    <div style="display:flex;gap:15px;margin-bottom:15px;padding-bottom:15px;border-bottom:1px solid var(--glass-border)">
+                        <div style="width:60px;height:60px;border-radius:8px;overflow:hidden;background:#25252b;flex-shrink:0;">
+                            @if (!string.IsNullOrEmpty(item.Product.ImageUrl))
+                            {
+                                <img src="@item.Product.ImageUrl" alt="@item.Product.Name" style="width:100%;height:100%;object-fit:cover;" />
+                            }
+                            else { <span>📦</span> }
+                        </div>
+                        <div style="flex:1">
+                            <div style="font-weight:600">@item.Product.Name</div>
+                            <div style="color:var(--primary);font-weight:700">$@item.Product.Price</div>
+                            <div style="display:flex;align-items:center;gap:10px;margin-top:5px">
+                                <button type="button" class="btn-qty" @onclick="@(async () => await Cart.UpdateQuantityAsync(item.Product.Id, -1))">-</button>
+                                <span>@item.Quantity</span>
+                                <button type="button" class="btn-qty" @onclick="@(async () => await Cart.UpdateQuantityAsync(item.Product.Id, 1))">+</button>
+                            </div>
+                        </div>
+                        <button type="button" @onclick="@(async () => await Cart.RemoveFromCartAsync(item.Product.Id))"
+                                style="color:#ff4757;background:transparent;border:none;cursor:pointer;height:fit-content">
+                            Eliminar
+                        </button>
+                    </div>
+                }
+            </div>
+            <div style="border-top:2px solid var(--glass-border);padding-top:20px">
+                <div style="display:flex;justify-content:space-between;font-size:1.2rem;font-weight:700;margin-bottom:20px">
+                    <span>Total:</span>
+                    <span style="color:var(--primary)">$@Cart.TotalPrice.ToString("F2")</span>
+                </div>
+                <button class="btn btn-primary" style="width:100%;justify-content:center"
+                        @onclick='@(() => JS.InvokeVoidAsync("alert", "¡Gracias por tu compra! (Simulación)"))'>
+                    Finalizar Compra
+                </button>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback OnClose { get; set; }
+}

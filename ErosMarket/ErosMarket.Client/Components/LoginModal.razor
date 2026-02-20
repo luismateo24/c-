@@ -1,0 +1,65 @@
+@using ErosMarket.Client.Services
+@using ErosMarket.Shared.DTOs
+@inject HttpClient Http
+@inject AuthStateService Auth
+
+<div class="modal-overlay">
+    <div class="modal-content glass">
+        <h2>Iniciar Sesión</h2>
+        <EditForm Model="model" OnValidSubmit="HandleLogin">
+            <DataAnnotationsValidator />
+            <div class="form-group">
+                <label>Email</label>
+                <InputText type="email" @bind-Value="model.Email" class="form-control" />
+            </div>
+            <div class="form-group">
+                <label>Contraseña</label>
+                <InputText type="password" @bind-Value="model.Password" class="form-control" />
+            </div>
+            @if (!string.IsNullOrEmpty(error))
+            {
+                <p class="error-text">@error</p>
+            }
+            <div class="modal-actions">
+                <button type="submit" class="btn btn-primary">Entrar</button>
+                <button type="button" class="btn btn-outline" @onclick="OnClose">Cancelar</button>
+            </div>
+        </EditForm>
+        <p style="text-align:center;margin-top:15px;font-size:0.9rem;color:var(--text-dim)">
+            ¿No tienes cuenta?
+            <span style="color:var(--primary);cursor:pointer;" @onclick="OnGoRegister"> Regístrate</span>
+        </p>
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnSuccess { get; set; }
+    [Parameter] public EventCallback OnGoRegister { get; set; }
+
+    LoginDTO model = new();
+    string error = "";
+
+    async Task HandleLogin()
+    {
+        error = "";
+        try
+        {
+            var res = await Http.PostAsJsonAsync("api/auth/login", model);
+            if (res.IsSuccessStatusCode)
+            {
+                var data = await res.Content.ReadFromJsonAsync<LoginResponseDTO>();
+                if (data != null) await Auth.LoginAsync(data);
+                await OnSuccess.InvokeAsync();
+            }
+            else
+            {
+                var err = await res.Content.ReadFromJsonAsync<ErrorMessage>();
+                error = err?.Message ?? "Credenciales inválidas.";
+            }
+        }
+        catch { error = "Error de conexión con el servidor."; }
+    }
+
+    record ErrorMessage(string Message);
+}

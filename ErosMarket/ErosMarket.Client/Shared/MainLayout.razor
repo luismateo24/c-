@@ -1,0 +1,70 @@
+@inherits LayoutComponentBase
+@using ErosMarket.Client.Services
+@using ErosMarket.Client.Components
+@inject AuthStateService Auth
+@inject CartService Cart
+@inject IJSRuntime JS
+
+<div class="app">
+    <NavBar OnShowLogin="@(() => showLogin = true)"
+            OnShowRegister="@(() => showRegister = true)"
+            OnShowCart="@(() => showCart = true)"
+            OnShowProfile="@(() => showProfile = true)"
+            OnLogout="HandleLogout" />
+
+    @Body
+
+    <footer style="padding:40px 5%;border-top:1px solid var(--glass-border);text-align:center;color:var(--text-dim)">
+        <p>© 2026 ErosMarket - Todos los derechos reservados.</p>
+    </footer>
+</div>
+
+@if (showLogin)
+{
+    <LoginModal OnClose="@(() => showLogin = false)"
+                OnSuccess="@(() => showLogin = false)"
+                OnGoRegister="@(() => { showLogin = false; showRegister = true; })" />
+}
+
+@if (showRegister)
+{
+    <RegisterModal OnClose="@(() => showRegister = false)"
+                   OnSuccess="@(() => { showRegister = false; showLogin = true; })" />
+}
+
+@if (showProfile)
+{
+    <ProfileModal OnClose="@(() => showProfile = false)" />
+}
+
+@if (showCart)
+{
+    <CartModal OnClose="@(() => showCart = false)" />
+}
+
+@code {
+    bool showLogin, showRegister, showProfile, showCart;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Auth.InitializeAsync();
+            await Cart.InitializeAsync();
+            Auth.OnChange += StateHasChanged;
+            Cart.OnChange += StateHasChanged;
+            StateHasChanged();
+        }
+    }
+
+    async Task HandleLogout()
+    {
+        await Auth.LogoutAsync();
+    }
+
+    public void Dispose()
+    {
+        Auth.OnChange -= StateHasChanged;
+        Cart.OnChange -= StateHasChanged;
+    }
+}
