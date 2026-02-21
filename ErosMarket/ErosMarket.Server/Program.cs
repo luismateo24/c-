@@ -17,19 +17,18 @@ if (!string.IsNullOrEmpty(port))
 
 builder.Services.AddControllers();
 
-// Allow the Vercel client origin in production, AND any localhost port in development.
-var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-    ?? Array.Empty<string>();
-
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        // Development wildcard + explicit production origins
-        policy.WithOrigins(allowedOrigins)
-              .SetIsOriginAllowedToAllowWildcardSubdomains()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
+        policy.SetIsOriginAllowed(origin => 
+        {
+            var host = new Uri(origin).Host;
+            return host == "localhost" || host.EndsWith(".vercel.app") || host.EndsWith("onrender.com");
+        })
+        .AllowAnyMethod()
+        .AllowAnyHeader()
+        .AllowCredentials();
     });
 });
 
@@ -58,10 +57,16 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 // DbContext — Neon (PostgreSQL)
-// In production the DATABASE_URL env var overrides the value in appsettings.json.
-var connectionString =
-    Environment.GetEnvironmentVariable("DATABASE_URL")
+var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL") 
     ?? builder.Configuration.GetConnectionString("DefaultConnection");
+
+if (connectionString != null && connectionString.StartsWith("postgres://"))
+{
+    // Convert postgres://user:pass@host:port/db to Npgsql format
+    var databaseUri = new Uri(connectionString);
+    var userInfo = databaseUri.UserInfo.Split(':');
+    connectionString = $"Host={databaseUri.Host};Port={databaseUri.Port};Database={databaseUri.LocalPath.Substring(1)};Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true;";
+}
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
