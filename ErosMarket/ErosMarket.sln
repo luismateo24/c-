@@ -7,8 +7,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ErosMarket.Shared", "ErosMa
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ErosMarket.Server", "ErosMarket.Server\ErosMarket.Server.csproj", "{641DBDBF-D3C5-4253-9891-37013592C76D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ErosMarket.Client", "ErosMarket.Client\ErosMarket.Client.csproj", "{E1B357A9-1259-4C7A-943F-C482083D802B}"
-EndProject
+
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -43,18 +42,7 @@ Global
 		{641DBDBF-D3C5-4253-9891-37013592C76D}.Release|x64.Build.0 = Release|Any CPU
 		{641DBDBF-D3C5-4253-9891-37013592C76D}.Release|x86.ActiveCfg = Release|Any CPU
 		{641DBDBF-D3C5-4253-9891-37013592C76D}.Release|x86.Build.0 = Release|Any CPU
-		{E1B357A9-1259-4C7A-943F-C482083D802B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E1B357A9-1259-4C7A-943F-C482083D802B}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E1B357A9-1259-4C7A-943F-C482083D802B}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{E1B357A9-1259-4C7A-943F-C482083D802B}.Debug|x64.Build.0 = Debug|Any CPU
-		{E1B357A9-1259-4C7A-943F-C482083D802B}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{E1B357A9-1259-4C7A-943F-C482083D802B}.Debug|x86.Build.0 = Debug|Any CPU
-		{E1B357A9-1259-4C7A-943F-C482083D802B}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E1B357A9-1259-4C7A-943F-C482083D802B}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E1B357A9-1259-4C7A-943F-C482083D802B}.Release|x64.ActiveCfg = Release|Any CPU
-		{E1B357A9-1259-4C7A-943F-C482083D802B}.Release|x64.Build.0 = Release|Any CPU
-		{E1B357A9-1259-4C7A-943F-C482083D802B}.Release|x86.ActiveCfg = Release|Any CPU
-		{E1B357A9-1259-4C7A-943F-C482083D802B}.Release|x86.Build.0 = Release|Any CPU
+
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
