@@ -4,16 +4,15 @@ WORKDIR /src
 
 # Copy solution & project files first (layer cache for restore)
 COPY ErosMarket.sln ./
-COPY ErosMarket.Shared/ErosMarket.Shared.csproj       ErosMarket.Shared/
-COPY ErosMarket.Client/ErosMarket.Client.csproj       ErosMarket.Client/
-COPY ErosMarket.Server/ErosMarket.Server.csproj       ErosMarket.Server/
+COPY ErosMarket.Shared/ErosMarket.Shared.csproj  ErosMarket.Shared/
+COPY ErosMarket.Server/ErosMarket.Server.csproj   ErosMarket.Server/
 
 RUN dotnet restore ErosMarket.Server/ErosMarket.Server.csproj
 
-# Copy all source files
+# Copy all source files (excluding node_modules / dist via .dockerignore)
 COPY . .
 
-# Publish the server (includes Blazor WASM files as static assets)
+# Publish the API
 RUN dotnet publish ErosMarket.Server/ErosMarket.Server.csproj \
     -c Release \
     -o /app/publish \

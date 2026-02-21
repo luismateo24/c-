@@ -103,23 +103,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-
-// Serve Blazor WASM static files from Client project output
-app.UseBlazorFrameworkFiles();
-app.UseStaticFiles();
+// Swagger available in all environments (useful for Render debugging)
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-
-// Fallback to index.html for Blazor client-side routing
-app.MapFallbackToFile("index.html");
 
 // Seed Data
 using (var scope = app.Services.CreateScope())
