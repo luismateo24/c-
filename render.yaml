@@ -1,0 +1,20 @@
+services:
+  # ── Backend API (Docker) ────────────────────────────────────────────────────
+  - type: web
+    name: erosmarket-api
+    runtime: docker
+    dockerfilePath: ErosMarket/Dockerfile
+    dockerContext: ErosMarket
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: DATABASE_URL
+        sync: false          # Neon DB connection string — set in Render dashboard
+      - key: JWT_KEY
+        sync: false          # Long random secret — set in Render dashboard
+      - key: JWT_ISSUER
+        value: ErosMarketApi
+      - key: JWT_AUDIENCE
+        value: ErosMarketUsers
+      - key: Cors__AllowedOrigins__0
+        sync: false          # e.g. https://eros-market.vercel.app — set in Render dashboard
