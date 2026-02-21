@@ -21,14 +21,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.SetIsOriginAllowed(origin => 
-        {
-            if (string.IsNullOrEmpty(origin)) return false;
-            try {
-                var host = new Uri(origin).Host;
-                return host == "localhost" || host.EndsWith(".vercel.app") || host.EndsWith("onrender.com");
-            } catch { return false; }
-        })
+        policy.SetIsOriginAllowed(origin => true) // TEMPORAL: Permitir TODO para debug
         .AllowAnyMethod()
         .AllowAnyHeader()
         .AllowCredentials();
@@ -130,6 +123,10 @@ app.UseSwaggerUI();
 app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Health check para verificar si la API está viva sin depender de la DB
+app.MapGet("/api/health", () => Results.Ok(new { status = "Healthy", time = DateTime.UtcNow }));
+
 app.MapControllers();
 
 // Seed Data
