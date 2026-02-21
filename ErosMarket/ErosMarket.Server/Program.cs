@@ -107,9 +107,23 @@ try
 
     Console.WriteLine("> Building application...");
     var app = builder.Build();
-    Console.WriteLine("> Application built.");
+    
+    // 1. GLOBAL EXCEPTION HANDLER (MUST HAVE CORS)
+    app.Use(async (context, next) => {
+        try {
+            await next();
+        } catch (Exception ex) {
+            Console.WriteLine($">>> REQUEST ERROR: {ex}");
+            context.Response.StatusCode = 500;
+            context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
+            await context.Response.WriteAsJsonAsync(new { error = ex.Message });
+        }
+    });
 
-    // Diagnostic Middleware: LOG ALL REQUESTS
+    // 2. CORS (EVERYTHING ELSE AFTER THIS)
+    app.UseCors("AllowFrontend");
+
+    // 3. LOGGING
     app.Use(async (context, next) =>
     {
         Console.WriteLine($"[DEBUG] {context.Request.Method} {context.Request.Path}");
@@ -120,11 +134,10 @@ try
     app.UseSwagger();
     app.UseSwaggerUI();
 
-    app.UseCors("AllowFrontend");
     app.UseAuthentication();
     app.UseAuthorization();
 
-    // Health Checks & Diagnostics
+    // Diagnostics
     app.MapGet("/", () => "ErosMarket API is Running! Try /api/health or /swagger");
     app.MapGet("/api/health", () => Results.Ok(new { status = "Healthy", time = DateTime.UtcNow, database = connectionString?.Contains("Host=") }));
     

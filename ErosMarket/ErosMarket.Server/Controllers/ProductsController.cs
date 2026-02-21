@@ -13,8 +13,21 @@ namespace ErosMarket.Server.Controllers
         public ProductsController(IProductRepository repository) { _repository = repository; }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Product>>> GetProducts() =>
-            Ok(await _repository.GetAllAsync());
+        public async Task<ActionResult<IEnumerable<Product>>> GetProducts() 
+        {
+            Console.WriteLine("[DEBUG] Controller: GetProducts called.");
+            try 
+            {
+                var products = await _repository.GetAllAsync();
+                Console.WriteLine($"> Found {products.Count()} products.");
+                return Ok(products);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(">>> ERROR fetching products: " + ex.Message);
+                throw;
+            }
+        }
 
         [HttpGet("{id}")]
         public async Task<ActionResult<Product>> GetProduct(int id)
