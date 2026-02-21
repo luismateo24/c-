@@ -3,8 +3,8 @@ services:
   - type: web
     name: erosmarket-api
     runtime: docker
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
+    dockerfilePath: Dockerfile
+    dockerContext: ErosMarket
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
