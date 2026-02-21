@@ -60,19 +60,22 @@ try
     var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL") 
         ?? builder.Configuration.GetConnectionString("DefaultConnection");
 
-    if (!string.IsNullOrEmpty(connectionString) && connectionString.StartsWith("postgres://"))
+    if (!string.IsNullOrEmpty(connectionString) && (connectionString.StartsWith("postgres://") || connectionString.StartsWith("postgresql://")))
     {
         try 
         {
-            Console.WriteLine("> Detected postgres:// URL. Parsing...");
+            Console.WriteLine("> Detected postgres URI. Parsing...");
             var databaseUri = new Uri(connectionString);
             var userInfo = databaseUri.UserInfo.Split(':');
             var user = userInfo.Length > 0 ? userInfo[0] : "";
             var pass = userInfo.Length > 1 ? userInfo[1] : "";
             var host = databaseUri.Host;
-            var portNum = databaseUri.Port;
+            var portNum = databaseUri.Port > 0 ? databaseUri.Port : 5432;
             var database = databaseUri.LocalPath.TrimStart('/');
             
+            // Si el nombre de la DB tiene parámetros (?sslmode...), los quitamos
+            if (database.Contains("?")) database = database.Split('?')[0];
+
             connectionString = $"Host={host};Port={portNum};Database={database};Username={user};Password={pass};SSL Mode=Require;Trust Server Certificate=true;";
             Console.WriteLine($"> Successfully parsed to Host={host}, DB={database}");
         }
