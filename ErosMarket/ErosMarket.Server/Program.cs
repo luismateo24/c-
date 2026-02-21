@@ -64,18 +64,27 @@ try
     {
         try 
         {
-            Console.WriteLine("> Parsing DATABASE_URL...");
+            Console.WriteLine("> Detected postgres:// URL. Parsing...");
             var databaseUri = new Uri(connectionString);
             var userInfo = databaseUri.UserInfo.Split(':');
             var user = userInfo.Length > 0 ? userInfo[0] : "";
             var pass = userInfo.Length > 1 ? userInfo[1] : "";
-            connectionString = $"Host={databaseUri.Host};Port={databaseUri.Port};Database={databaseUri.LocalPath.Substring(1)};Username={user};Password={pass};SSL Mode=Require;Trust Server Certificate=true;";
-            Console.WriteLine("> DATABASE_URL parsed successfully.");
+            var host = databaseUri.Host;
+            var portNum = databaseUri.Port;
+            var database = databaseUri.LocalPath.TrimStart('/');
+            
+            connectionString = $"Host={host};Port={portNum};Database={database};Username={user};Password={pass};SSL Mode=Require;Trust Server Certificate=true;";
+            Console.WriteLine($"> Successfully parsed to Host={host}, DB={database}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine("> Error parsing DATABASE_URL: " + ex.Message);
+            Console.WriteLine($">>> CRITICAL: Error parsing DATABASE_URL: {ex.Message}");
         }
+    }
+
+    if (string.IsNullOrEmpty(connectionString))
+    {
+        Console.WriteLine(">>> WARNING: Connection string is EMPTY! API will likely crash on DB access.");
     }
 
     builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -113,14 +122,18 @@ try
         try {
             await next();
         } catch (Exception ex) {
-            Console.WriteLine($">>> REQUEST ERROR: {ex}");
-            context.Response.StatusCode = 500;
-            context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
-            await context.Response.WriteAsJsonAsync(new { error = ex.Message });
+            Console.WriteLine($"\n>>> CRITICAL REQUEST ERROR: {ex.GetType().Name}\n{ex}\n");
+            
+            if (!context.Response.HasStarted)
+            {
+                context.Response.StatusCode = 500;
+                context.Response.Headers["Access-Control-Allow-Origin"] = "*";
+                await context.Response.WriteAsJsonAsync(new { error = ex.Message, detail = ex.ToString() });
+            }
         }
     });
 
-    // 2. CORS (EVERYTHING ELSE AFTER THIS)
+    // 2. CORS
     app.UseCors("AllowFrontend");
 
     // 3. LOGGING
@@ -139,7 +152,18 @@ try
 
     // Diagnostics
     app.MapGet("/", () => "ErosMarket API is Running! Try /api/health or /swagger");
-    app.MapGet("/api/health", () => Results.Ok(new { status = "Healthy", time = DateTime.UtcNow, database = connectionString?.Contains("Host=") }));
+    app.MapGet("/api/health", async (ApplicationDbContext db) => {
+        try {
+            var canConnect = await db.Database.CanConnectAsync();
+            return Results.Ok(new { 
+                status = "Healthy", 
+                database_connection = canConnect ? "Connected" : "Failed",
+                time = DateTime.UtcNow 
+            });
+        } catch (Exception ex) {
+            return Results.Ok(new { status = "Degraded", error = ex.Message, time = DateTime.UtcNow });
+        }
+    });
     
     app.MapControllers();
 

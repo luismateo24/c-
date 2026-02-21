@@ -26,8 +26,21 @@ namespace ErosMarket.Server.Repositories
             }
         }
 
-        public async Task<IEnumerable<Product>> GetAllAsync() =>
-            await _context.Products.ToListAsync();
+        public async Task<IEnumerable<Product>> GetAllAsync() 
+        {
+            Console.WriteLine("[DEBUG] Repository: Fetching all products from DB...");
+            try 
+            {
+                var list = await _context.Products.ToListAsync();
+                Console.WriteLine($"> DB returned {list.Count} items.");
+                return list;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(">>> DATABASE ERROR in GetAllAsync: " + ex.Message);
+                throw;
+            }
+        }
 
         public async Task<Product?> GetByIdAsync(int id) =>
             await _context.Products.FindAsync(id);
