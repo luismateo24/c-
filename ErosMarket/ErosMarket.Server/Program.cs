@@ -109,6 +109,14 @@ try
     var app = builder.Build();
     Console.WriteLine("> Application built.");
 
+    // Diagnostic Middleware: LOG ALL REQUESTS
+    app.Use(async (context, next) =>
+    {
+        Console.WriteLine($"[DEBUG] {context.Request.Method} {context.Request.Path}");
+        await next();
+        Console.WriteLine($"[DEBUG] Status: {context.Response.StatusCode}");
+    });
+
     app.UseSwagger();
     app.UseSwaggerUI();
 
@@ -116,7 +124,10 @@ try
     app.UseAuthentication();
     app.UseAuthorization();
 
-    app.MapGet("/api/health", () => Results.Ok(new { status = "Healthy", time = DateTime.UtcNow }));
+    // Health Checks & Diagnostics
+    app.MapGet("/", () => "ErosMarket API is Running! Try /api/health or /swagger");
+    app.MapGet("/api/health", () => Results.Ok(new { status = "Healthy", time = DateTime.UtcNow, database = connectionString?.Contains("Host=") }));
+    
     app.MapControllers();
 
     // Data Seeding
