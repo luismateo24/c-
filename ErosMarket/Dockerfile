@@ -22,6 +22,9 @@ RUN dotnet publish ErosMarket.Server/ErosMarket.Server.csproj \
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 
+# Enable globalization invariant mode to avoid Status 139 on some Linux environments
+ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
+
 COPY --from=build /app/publish .
 
 # Render sets PORT automatically; default to 8080 for local Docker runs

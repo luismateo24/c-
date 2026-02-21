@@ -23,8 +23,11 @@ builder.Services.AddCors(options =>
     {
         policy.SetIsOriginAllowed(origin => 
         {
-            var host = new Uri(origin).Host;
-            return host == "localhost" || host.EndsWith(".vercel.app") || host.EndsWith("onrender.com");
+            if (string.IsNullOrEmpty(origin)) return false;
+            try {
+                var host = new Uri(origin).Host;
+                return host == "localhost" || host.EndsWith(".vercel.app") || host.EndsWith("onrender.com");
+            } catch { return false; }
         })
         .AllowAnyMethod()
         .AllowAnyHeader()
@@ -60,12 +63,22 @@ builder.Services.AddSwaggerGen(c =>
 var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL") 
     ?? builder.Configuration.GetConnectionString("DefaultConnection");
 
-if (connectionString != null && connectionString.StartsWith("postgres://"))
+if (!string.IsNullOrEmpty(connectionString) && connectionString.StartsWith("postgres://"))
 {
-    // Convert postgres://user:pass@host:port/db to Npgsql format
-    var databaseUri = new Uri(connectionString);
-    var userInfo = databaseUri.UserInfo.Split(':');
-    connectionString = $"Host={databaseUri.Host};Port={databaseUri.Port};Database={databaseUri.LocalPath.Substring(1)};Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true;";
+    try 
+    {
+        Console.WriteLine("Parsing DATABASE_URL...");
+        var databaseUri = new Uri(connectionString);
+        var userInfo = databaseUri.UserInfo.Split(':');
+        var user = userInfo.Length > 0 ? userInfo[0] : "";
+        var pass = userInfo.Length > 1 ? userInfo[1] : "";
+        connectionString = $"Host={databaseUri.Host};Port={databaseUri.Port};Database={databaseUri.LocalPath.Substring(1)};Username={user};Password={pass};SSL Mode=Require;Trust Server Certificate=true;";
+        Console.WriteLine("DATABASE_URL parsed successfully.");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine("Error parsing DATABASE_URL: " + ex.Message);
+    }
 }
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -106,7 +119,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
+Console.WriteLine("Building application...");
 var app = builder.Build();
+Console.WriteLine("Application built.");
 
 // Swagger available in all environments (useful for Render debugging)
 app.UseSwagger();
@@ -118,6 +133,7 @@ app.UseAuthorization();
 app.MapControllers();
 
 // Seed Data
+Console.WriteLine("Starting data seeding...");
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
